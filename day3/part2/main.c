@@ -59,7 +59,12 @@ int main(int argc, char **argv)
 		return(-1);
 	}
 
+	log_trace("input:\n%s", input);
+	log_trace("input size: %llu", input_size);
+
 	u64 input_index = 0;
+	/* TODO: write code for part 2
+	 * - now use 12 batteries from each memory bank */
 	while(input_index < input_size)
 	{
 		switch(input[input_index])
@@ -79,6 +84,7 @@ int main(int argc, char **argv)
 						u32 joltage = parse.left_digit * 10 + parse.right_digit;
 						parse.joltage += joltage;
 
+						log_debug("joltage: %u%u", parse.left_digit, parse.right_digit);
 						parse.parse_stage = PARSE_STAGE_FINDING_NEWLINE;
 						parse.line_start_index = parse.line_start_index + parse.line_length + 1;
 						parse.left_digit = 0;
@@ -139,7 +145,7 @@ int main(int argc, char **argv)
 			} break;
 			default:
 			{
-				log_error("char: %c", input[input_index]);
+				log_debug("char: %c", input[input_index]);
 				_assert_message(0, "unexpected char in input");
 			} break;
 		}
