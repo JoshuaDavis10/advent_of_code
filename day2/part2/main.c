@@ -46,35 +46,47 @@ b32 is_id_invalid(u64 id)
 	}
 	global_id_string_buffer[digits] = '\0';
 
-	/* odd IDs are always valid */
-	if(digits % 2 == 1)
+	b32 repeating_pattern = true;
+	u32 midpoint_index = digits / 2;
+	u32 segment_index = 0;
+	u32 segment_size = 1;
+	u32 index = 0;
+
+	if(digits < 2)
 	{
 		return(false);
 	}
 
-	b32 equal_halves = true;
-	u32 midpoint_index = digits / 2;
-	u32 index = 0;
-	while(index < midpoint_index)
+	while(segment_size <= midpoint_index)
 	{
-		if(global_id_string_buffer[index] != global_id_string_buffer[index + midpoint_index])
+		if(digits % segment_size == 0)
 		{
-			equal_halves = false;
-			break;
+			repeating_pattern = true;
+			u32 num_segments = digits/segment_size;
+			for(segment_index = 0; segment_index < num_segments; segment_index++)
+			{
+				for(index = 0; index < segment_size; index++)
+				{
+					if(global_id_string_buffer[index] != global_id_string_buffer[segment_index * segment_size + index])
+					{
+						repeating_pattern = false;
+						break;
+					}
+				}
+				if(repeating_pattern == false)
+				{
+					break;
+				}
+			}
+			if(repeating_pattern == true)
+			{
+				break;
+			}
 		}
-		index++;
+		segment_size++;
 	}
 
-	/* TODO: PART 2 CHANGES: invalid IDs include sequences that repeat more than just once (i.e. 121212 is
-	 * invalid bc it's a repeating '12)) */
-
-	/* TODO: REMOVE. debug logging */
-	if(equal_halves)
-	{
-		log_debug("INVALID ID: %u (global_id_string_buffer: %s)", id, global_id_string_buffer);
-	}
-
-	return(equal_halves);
+	return(repeating_pattern);
 }
 
 int main(int argc, char **argv)
@@ -100,9 +112,6 @@ int main(int argc, char **argv)
 		return(-1);
 	}
 
-	log_trace("input: %s", input);
-
-
 	global_id_string_buffer = malloc(MAX_ID_STRING_LENGTH + 1); /* NOTE(josh): +1 for null terminator */
 	_assert(global_id_string_buffer);
 
@@ -120,7 +129,6 @@ int main(int argc, char **argv)
 			case ',':
 			{
 				_assert(parse_state == PARSE_STATE_SECOND_NUMBER);
-				log_debug("range: %llu-%llu", range_start, range_end);
 				u64 id = 0;
 				for(id = range_start ; id <= range_end; id++)
 				{
