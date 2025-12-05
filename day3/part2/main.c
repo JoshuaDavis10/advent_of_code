@@ -89,7 +89,6 @@ int main(int argc, char **argv)
 							parse.digits[digit_index] = 0;
 						}
 						parse.line_length = 0;
-						continue;
 					} break;
 					case PARSE_STAGE_FINDING_NEWLINE:
 					{
@@ -121,11 +120,12 @@ int main(int argc, char **argv)
 						for( ; digit < DIGITS; digit++)
 						{
 							if(input[input_index] - 48 > parse.digits[digit] && 
-								(input_index < (parse.line_start_index + parse.line_length - (DIGITS - digit))))
+								(input_index < 
+								(parse.line_start_index + parse.line_length - (DIGITS - digit) + 1)))
 							{
 								parse.digits[digit] = input[input_index] - 48;
-								u32 i = 0;
-								for( ; i < (DIGITS - digit); i++)
+								u32 i = digit + 1;
+								for( ; i < DIGITS; i++)
 								{
 									parse.digits[i] = 0;
 								}
