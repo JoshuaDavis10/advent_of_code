@@ -56,6 +56,9 @@ int main(int argc, char **argv)
 		return(-1);
 	}
 
+	log_trace("input: \n%s", input);
+	log_trace("input size: %llu", input_size);
+
 	/* preparse */
 	u64 input_index = 0;
 	while(input_index < input_size)
@@ -65,6 +68,8 @@ int main(int argc, char **argv)
 			parse.grid_width = input_index;
 			/* NOTE(josh): +1 for '\n' at end of each row */
 			parse.grid_height = input_size / (parse.grid_width + 1); 
+			log_debug("grid width:  %u", parse.grid_width);
+			log_debug("grid height: %u", parse.grid_height);
 			break;
 		}
 		input_index++;
@@ -138,8 +143,18 @@ int main(int argc, char **argv)
 				}
 				if(adjacent_rolls < ADJACENT_ROLLS_THRESHOLD)
 				{
+					log_debug("(index: %llu): ACCESSIBLE (adjacent rolls: %u", input_index, adjacent_rolls);
 					parse.accessible_rolls++;
 				}
+				else
+				{
+					log_debug("(index: %llu): INACCESSIBLE (adjacent rolls: %u", input_index, adjacent_rolls);
+				}
+
+				log_debug("adjacent items (for index: %llu):\n%c%c%c\n%c%c%c\n%c%c%c", input_index,
+					parse.adjacent_items[0], parse.adjacent_items[1], parse.adjacent_items[2],
+					parse.adjacent_items[7], 'I', parse.adjacent_items[3],
+					parse.adjacent_items[6], parse.adjacent_items[5], parse.adjacent_items[4]);
 			} break;
 			case '.':
 			{
