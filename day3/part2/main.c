@@ -15,23 +15,22 @@ typedef unsigned int b32;
 #define true 1
 #define false 0
 
+#define DIGITS 12
+
 #include "linux_util.c"
 
 enum {
 	PARSE_STAGE_FINDING_NEWLINE,
-	PARSE_STAGE_LEFT_DIGIT,
-	PARSE_STAGE_RIGHT_DIGIT,
+	PARSE_STAGE_PARSING_DIGITS,
 	PARSE_STAGE_COUNT
 };
 
 typedef struct {
-	u64 left_digit_index;
+	u8 digits[DIGITS];
 	u64 line_start_index;
 	u64 line_length;
 	u64 joltage;
 	i32 parse_stage;
-	u8 left_digit;
-	u8 right_digit;
 } parse_data;
 
 static parse_data parse;
@@ -63,8 +62,6 @@ int main(int argc, char **argv)
 	log_trace("input size: %llu", input_size);
 
 	u64 input_index = 0;
-	/* TODO: write code for part 2
-	 * - now use 12 batteries from each memory bank */
 	while(input_index < input_size)
 	{
 		switch(input[input_index])
@@ -73,28 +70,30 @@ int main(int argc, char **argv)
 			{
 				switch(parse.parse_stage)
 				{
-					case PARSE_STAGE_LEFT_DIGIT:
+					case PARSE_STAGE_PARSING_DIGITS:
 					{
-						parse.parse_stage = PARSE_STAGE_RIGHT_DIGIT;
-						input_index = parse.line_start_index;
-						continue; /* NOTE(josh): skips the input_index++; */
-					} break;
-					case PARSE_STAGE_RIGHT_DIGIT:
-					{
-						u32 joltage = parse.left_digit * 10 + parse.right_digit;
+						u64 joltage = 0;
+						u32 digit_index = 0;
+						for( ; digit_index < DIGITS; digit_index++)
+						{
+							joltage = 10 * joltage + parse.digits[digit_index];
+						}
+						log_debug("joltage: %llu", joltage);
 						parse.joltage += joltage;
 
-						log_debug("joltage: %u%u", parse.left_digit, parse.right_digit);
 						parse.parse_stage = PARSE_STAGE_FINDING_NEWLINE;
-						parse.line_start_index = parse.line_start_index + parse.line_length + 1;
-						parse.left_digit = 0;
-						parse.right_digit = 0;
-						parse.left_digit_index = 0;
+						parse.line_start_index = input_index + 1;
+						digit_index = 0;
+						for( ; digit_index < DIGITS; digit_index++)
+						{
+							parse.digits[digit_index] = 0;
+						}
 						parse.line_length = 0;
+						continue;
 					} break;
 					case PARSE_STAGE_FINDING_NEWLINE:
 					{
-						parse.parse_stage = PARSE_STAGE_LEFT_DIGIT;
+						parse.parse_stage = PARSE_STAGE_PARSING_DIGITS;
 						input_index = parse.line_start_index;
 						continue; /* NOTE(josh): skips the input_index++; */
 					} break;
@@ -116,21 +115,22 @@ int main(int argc, char **argv)
 			{
 				switch(parse.parse_stage)
 				{
-					case PARSE_STAGE_LEFT_DIGIT:
+					case PARSE_STAGE_PARSING_DIGITS:
 					{
-						if((input[input_index] - 48) > parse.left_digit && 
-							input_index < (parse.line_start_index + parse.line_length - 1))
+						u32 digit = 0;
+						for( ; digit < DIGITS; digit++)
 						{
-							parse.left_digit = input[input_index] - 48;
-							parse.left_digit_index = input_index;
-						}
-					} break;
-					case PARSE_STAGE_RIGHT_DIGIT:
-					{
-						if((input[input_index] - 48) > parse.right_digit &&
-							input_index > parse.left_digit_index)
-						{
-							parse.right_digit = input[input_index] - 48;
+							if(input[input_index] - 48 > parse.digits[digit] && 
+								(input_index < (parse.line_start_index + parse.line_length - (DIGITS - digit))))
+							{
+								parse.digits[digit] = input[input_index] - 48;
+								u32 i = 0;
+								for( ; i < (DIGITS - digit); i++)
+								{
+									parse.digits[i] = 0;
+								}
+								break;
+							}
 						}
 					} break;
 					case PARSE_STAGE_FINDING_NEWLINE:
