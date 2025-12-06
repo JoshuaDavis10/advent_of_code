@@ -51,6 +51,8 @@ static void add_id_range(u64 min, u64 max)
 		_assert(global_nodes_allocated > 0);
 		global_id_ranges[0].range_minimum = min;
 		global_id_ranges[0].range_maximum = max;
+		log_debug("created root node with range (%llu, %llu)", 
+			global_id_ranges[0].range_minimum, global_id_ranges[0].range_maximum);
 		return;
 	}
 	i32 current_node_index = 0;
@@ -78,6 +80,8 @@ static void add_id_range(u64 min, u64 max)
 				global_id_ranges[insert_index].has_left_child = false;
 				global_id_ranges[insert_index].has_right_child = false;
 				global_id_ranges[current_node_index].has_right_child = true;
+				log_debug("created node @ index %d with range (%llu, %llu)", insert_index, 
+					global_id_ranges[insert_index].range_minimum, global_id_ranges[insert_index].range_maximum);
 				break;
 			}
 		}
@@ -101,6 +105,8 @@ static void add_id_range(u64 min, u64 max)
 				global_id_ranges[insert_index].has_left_child = false;
 				global_id_ranges[insert_index].has_right_child = false;
 				global_id_ranges[current_node_index].has_left_child = true;
+				log_debug("created node @ index %d with range (%llu, %llu)", insert_index, 
+					global_id_ranges[insert_index].range_minimum, global_id_ranges[insert_index].range_maximum);
 				break;
 			}
 		}
@@ -111,10 +117,19 @@ static void add_id_range(u64 min, u64 max)
 				/* do nothing since it's a repeat range or subset */
 				break;
 			}
-			/* replace node with superset node */
+			/* XXX: okay I'm just gonna replace the node with the superset one, that should still work yeah ? */
+			log_debug("replacing range (%llu, %llu) with range (%llu, %llu)", 
+				current_node.range_minimum, current_node.range_maximum,
+				min, max);
 			global_id_ranges[current_node_index].range_minimum = min;
 			global_id_ranges[current_node_index].range_maximum = max;
 			break;
+			/*
+			_assert_log(0, "looks like we hit the case where a range is a subset of another. the 2 ranges "
+				"involved are: (%llu, %llu) and (%llu, %llu).",
+				current_node.range_minimum, current_node.range_maximum,
+				min, max);
+				*/
 		}
 	}
 }
@@ -129,6 +144,7 @@ static b32 is_ingredient_fresh(u64 ingredient_id)
 		id_range_tree_node current_node = global_id_ranges[current_node_index];
 		if(ingredient_id >= current_node.range_minimum && ingredient_id <= current_node.range_maximum)
 		{
+			log_debug("ingredient %llu is fresh!", ingredient_id);
 			fresh = true;
 			break;
 		}
@@ -189,6 +205,9 @@ int main(int argc, char **argv)
 		return(-1);
 	}
 
+	log_trace("input: \n%s", input);
+	log_trace("input size: %llu", input_size);
+
 	global_id_ranges = malloc(sizeof(id_range_tree_node) * 3);
 	_assert(global_id_ranges);
 	global_id_ranges[0].has_left_child = false;
@@ -197,6 +216,13 @@ int main(int argc, char **argv)
 	global_id_ranges[0].range_maximum = 0;
 	global_nodes_allocated = 3;
 
+	/* TODO: day 5 part 2 stuff 
+	 * - only checking ranges now, so no reading in ids
+	 * - I think you'll have to leverage the binary tree structure in some way
+	 *		have each node ask it's children how many unique ids it has in its range by giving each child
+	 *		the nodes min/max and it's siblings min/max ?
+	 *		then each node sort of percolates that up to the root ?
+	 */
 	u32 fresh_ids = 0;
 	u64 input_index = 0;
 	while(input_index < input_size)
