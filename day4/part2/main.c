@@ -18,7 +18,7 @@ typedef unsigned int b32;
 #define ADJACENT_POSITIONS 8
 #define ADJACENT_ROLLS_THRESHOLD 4
 
-#include "linux_util.c"
+#include "../../include/linux_util.c"
 
 typedef struct {
 	u8  adjacent_items[ADJACENT_POSITIONS];
@@ -28,55 +28,16 @@ typedef struct {
 	b32 bottom;
 	u32 grid_width; /* NOTE(josh): does not include '\n' */
 	u32 grid_height;
-	u32 accessible_rolls;
+	u32 removable_rolls;
 } parse_data;
 
 static parse_data parse;
 
-int main(int argc, char **argv)
+/* NOTE(josh): returns 'true' if rolls were removed during the parse */
+b32 parse_input(char *input, u64 input_size)
 {
-	if(argc != 2)
-	{
-		log_error("USAGE -> ./prog [input_file]");
-		return(-1);
-	}
-
-	u64 input_size = get_file_size(argv[1]);
-	char *input = (char*)read_file_mmapped(argv[1]);
-
-	if(input_size == 0)
-	{
-		log_error("input file '%s' has size: 0. terminating.", argv[1]);
-		return(-1);
-	}
-
-	if(!input)
-	{
-		log_error("could not read input from '%s'. terminating.", argv[1]);
-		return(-1);
-	}
-
-	log_trace("input: \n%s", input);
-	log_trace("input size: %llu", input_size);
-
-	/* preparse */
+	b32 rolls_removed = false;
 	u64 input_index = 0;
-	while(input_index < input_size)
-	{
-		if(input[input_index] == '\n')
-		{
-			parse.grid_width = input_index;
-			/* NOTE(josh): +1 for '\n' at end of each row */
-			parse.grid_height = input_size / (parse.grid_width + 1); 
-			log_debug("grid width:  %u", parse.grid_width);
-			log_debug("grid height: %u", parse.grid_height);
-			break;
-		}
-		input_index++;
-	}
-
-	/* actual parse */
-	input_index = 0;
 	while(input_index < input_size)
 	{
 		switch(input[input_index])
@@ -97,7 +58,7 @@ int main(int argc, char **argv)
 				if(input_index < parse.grid_width) { parse.top = true; }
 				if(input_index % (parse.grid_width + 1) == 0) { parse.left = true; }
 				if(input_index % (parse.grid_width + 1) == (parse.grid_width - 1)) { parse.right = true; }
-				if(input_index >= input_size - (parse.grid_width - 1)) { parse.bottom = true; }
+				if(input_index >= input_size - (parse.grid_width + 1)) { parse.bottom = true; }
 
 				/* up and left */
 				if(!parse.left && !parse.top) {
@@ -143,24 +104,20 @@ int main(int argc, char **argv)
 				}
 				if(adjacent_rolls < ADJACENT_ROLLS_THRESHOLD)
 				{
-					log_debug("(index: %llu): ACCESSIBLE (adjacent rolls: %u", input_index, adjacent_rolls);
-					parse.accessible_rolls++;
+					parse.removable_rolls++;
+					rolls_removed = true;
+					input[input_index] = 'x';
 				}
-				else
-				{
-					log_debug("(index: %llu): INACCESSIBLE (adjacent rolls: %u", input_index, adjacent_rolls);
-				}
-
-				log_debug("adjacent items (for index: %llu):\n%c%c%c\n%c%c%c\n%c%c%c", input_index,
-					parse.adjacent_items[0], parse.adjacent_items[1], parse.adjacent_items[2],
-					parse.adjacent_items[7], 'I', parse.adjacent_items[3],
-					parse.adjacent_items[6], parse.adjacent_items[5], parse.adjacent_items[4]);
 			} break;
 			case '.':
 			{
 				/* do nothing */
 			} break;
 			case '\n':
+			{
+				/* do nothing */
+			} break;
+			case 'x':
 			{
 				/* do nothing */
 			} break;
@@ -171,8 +128,66 @@ int main(int argc, char **argv)
 		}
 		input_index++;
 	}
+	return(rolls_removed);
+}
 
-	log_info("accessible rolls: %u", parse.accessible_rolls);
+int main(int argc, char **argv)
+{
+	if(argc != 2)
+	{
+		log_error("USAGE -> ./prog [input_file]");
+		return(-1);
+	}
+
+	/* NOTE(josh): not using read_file_mmapped anymore since we will have to edit the data */
+	u64 input_size = get_file_size(argv[1]);
+
+	if(input_size == 0)
+	{
+		log_error("input file '%s' has size: 0. terminating.", argv[1]);
+		return(-1);
+	}
+
+	char *input = malloc(input_size + 1);
+	input[input_size] = '\0';
+
+	if(!input)
+	{
+		log_error("failed to allocate input buffer. terminating.");
+		return(-1);
+	}
+
+	if(!read_file_into_buffer(argv[1], input, input_size))
+	{
+		log_error("could not read input from '%s'. terminating.", argv[1]);
+		return(-1);
+	}
+
+	/* preparse */
+	u64 input_index = 0;
+	while(input_index < input_size)
+	{
+		if(input[input_index] == '\n')
+		{
+			parse.grid_width = input_index;
+			/* NOTE(josh): +1 for '\n' at end of each row */
+			parse.grid_height = input_size / (parse.grid_width + 1); 
+			break;
+		}
+		input_index++;
+	}
+
+	/* actual parse */
+	/* TODO: do parses until no more rolls can be removed */
+	b32 rolls_removed = true;
+	while(rolls_removed)
+	{
+		rolls_removed = parse_input(input, input_size);
+	}
+
+	log_info("removable rolls: %u", parse.removable_rolls);
+
+	free(input);
 
 	return(0);
 }

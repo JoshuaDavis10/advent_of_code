@@ -56,7 +56,7 @@ typedef char static_assertion_##message[(expression)?1:-1]
 #define LOGGER_TRACE_ENABLED 1 
 #define LOGGER_LIBRARY_ENABLED 1
 
-#define LOGGER_LOG_TO_FILE 1
+#define LOGGER_LOG_TO_FILE 0
 #if LOGGER_LOG_TO_FILE
 
 #define LOGGER_LOG_FILE_NAME "output.log"
