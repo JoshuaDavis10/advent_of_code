@@ -55,6 +55,16 @@ int main(int argc, char **argv)
 	log_trace("input: \n%s", input);
 	log_trace("input size: %llu", input_size);
 
+	/* TODO(josh): so I think I want to store the ranges in a binary tree 
+	 * - if the range is lower than it's parent, it's a left child, if the range is higher than it's parent,
+	 *   it's a right child... XXX do we want to do any balancing? that seems somewhat unnecessary
+	 *   XXX: if you are trying to find where in the tree a range should go, and you realize that it is a superset
+	 *   or subset of a node, then delete that node, or the range, respectively... if its the superset case
+	 *   you may have to also delete children, if they also a subset of said superset.
+	 * - that's a good bit of initial setup, but it should make the lookups much faster than a naive 
+	 *   implementation ( you could even do a naive implementation and compare )
+	 */
+
 	u64 input_index = 0;
 	while(input_index < input_size)
 	{
