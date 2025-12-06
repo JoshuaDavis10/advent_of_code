@@ -319,9 +319,6 @@ int main(int argc, char **argv)
 	global_id_ranges[0].range_maximum = 0;
 	global_nodes_allocated = 3;
 
-	/* TODO: day 5 part 2 stuff 
-	 * - OKAY, SO BASICALLY WHILE PARSING, IF 2 RANGES OVERLAP, YOU NEED TO MERGE THEM INTO ONE RANGE
-	 */
 	u64 fresh_ids = 0;
 	u64 input_index = 0;
 	b32 parsing = true;
