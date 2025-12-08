@@ -464,3 +464,7 @@ b32 write_buffer_into_file_append(const char *filename, void *buffer, u64 buffer
 
 	return(true);
 }
+
+/* TODO: dynamic arrays */
+
+/* TODO: binary trees */
