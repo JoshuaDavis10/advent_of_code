@@ -465,6 +465,17 @@ b32 write_buffer_into_file_append(const char *filename, void *buffer, u64 buffer
 	return(true);
 }
 
+/* memory stuff */
+#include <string.h>
+b32 zero_memory(void *memory, u64 size)
+{
+	if(memset(memory, 0, size))
+	{
+		return(true);
+	}
+	return(false);
+}
+
 /* TODO: dynamic arrays */
 
-/* TODO: binary trees */
+/* NOTE(josh): binary trees might be nice as well? */
