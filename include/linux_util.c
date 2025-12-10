@@ -466,7 +466,9 @@ b32 write_buffer_into_file_append(const char *filename, void *buffer, u64 buffer
 }
 
 /* memory stuff */
-#include <string.h>
+	/* TODO: write own version of memset or look into platform-specific alternatives ? 
+	 * (i just want to avoid using c standard library where possible */
+#include <string.h> 
 b32 zero_memory(void *memory, u64 size)
 {
 	if(memset(memory, 0, size))
@@ -477,5 +479,100 @@ b32 zero_memory(void *memory, u64 size)
 }
 
 /* TODO: dynamic arrays */
+/* NOTE(josh): not rlly sure how to name stuff, but I guess width is "stride", size is how much is actually allocated,
+ * and length is how much is actually in it? */
+#define DYNAMIC_ARRAY_HEADER_SIZE 3 * sizeof(u64)
+#define DYNAMIC_ARRAY_SIZE_INDEX 0
+#define DYNAMIC_ARRAY_LENGTH_INDEX 1
+#define DYNAMIC_ARRAY_WIDTH_INDEX 2
+void *dynamic_array_create(u64 width, u64 size)
+{
+	u64 *header = (u64*)malloc(width * size + DYNAMIC_ARRAY_HEADER_SIZE);
+	header[DYNAMIC_ARRAY_SIZE_INDEX]   = size;
+	header[DYNAMIC_ARRAY_LENGTH_INDEX] = 0;
+	header[DYNAMIC_ARRAY_WIDTH_INDEX]  = width;
+	void *array = (void *) ((char *)header + DYNAMIC_ARRAY_HEADER_SIZE);
+	return(array);
+}
+
+void dynamic_array_destroy(void *array)
+{
+	void *header = ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	free(header);
+}
+
+void *dynamic_array_expand(void *array)
+{
+	u64 *header = (u64 *) ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	u64 array_size = header[DYNAMIC_ARRAY_SIZE_INDEX];
+	_assert(array_size != 0);
+	header[DYNAMIC_ARRAY_SIZE_INDEX] = 2 * array_size;
+
+	header = 
+		(u64*)realloc(header, header[DYNAMIC_ARRAY_WIDTH_INDEX] * header[DYNAMIC_ARRAY_SIZE_INDEX] + DYNAMIC_ARRAY_HEADER_SIZE);
+	array = (void *) ((char *)header + DYNAMIC_ARRAY_HEADER_SIZE);
+	return(array);
+}
+
+/* TODO: test this macro lol */
+#define dynamic_array_access(array, index, type) (*((type *)_dynamic_array_access(array, index)))
+void *_dynamic_array_access(void *array, u64 index)
+{
+	u64 *header = (u64 *) ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	_assert(header[DYNAMIC_ARRAY_LENGTH_INDEX] > index);
+
+	void *result = (void *) ((char *)array + (header[DYNAMIC_ARRAY_WIDTH_INDEX] * index));
+	return(result);
+}
+
+void *dynamic_array_add(void *array, void *data)
+{
+	u64 *header = (u64 *) ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	if(header[DYNAMIC_ARRAY_LENGTH_INDEX] >= header[DYNAMIC_ARRAY_SIZE_INDEX])
+	{
+		array = dynamic_array_expand(array);
+		header = (u64 *) ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	}
+	void *add_address = (void *) ((char *)array + header[DYNAMIC_ARRAY_WIDTH_INDEX] * header[DYNAMIC_ARRAY_LENGTH_INDEX]);
+	memcpy(add_address, data, header[DYNAMIC_ARRAY_WIDTH_INDEX]);
+	header[DYNAMIC_ARRAY_LENGTH_INDEX] += 1;
+	return(array);
+}
+
+void *dynamic_array_insert(void *array, void *data, u64 index)
+{
+	u64 *header = (u64 *) ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	_assert(index <= header[DYNAMIC_ARRAY_LENGTH_INDEX]);
+	if(header[DYNAMIC_ARRAY_LENGTH_INDEX] >= header[DYNAMIC_ARRAY_SIZE_INDEX])
+	{
+		array = dynamic_array_expand(array);
+		header = (u64 *) ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	}
+
+	/* move */
+	i32 char_index = header[DYNAMIC_ARRAY_WIDTH_INDEX] * (header[DYNAMIC_ARRAY_LENGTH_INDEX] - index);
+	void *move_from = (void *) ((char *)array + header[DYNAMIC_ARRAY_WIDTH_INDEX] * index);
+	void *move_to   = (void *) ((char *)array + header[DYNAMIC_ARRAY_WIDTH_INDEX] * (index + 1));
+	memmove(move_to, move_from, header[DYNAMIC_ARRAY_WIDTH_INDEX] * (header[DYNAMIC_ARRAY_LENGTH_INDEX] - index));
+
+	/* insert */
+	memcpy(move_from, data, header[DYNAMIC_ARRAY_WIDTH_INDEX]);
+	header[DYNAMIC_ARRAY_LENGTH_INDEX] += 1;
+	return(array);
+}
+
+u64 dynamic_array_length(void *array)
+{
+	u64 *header = (u64 *) ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	return(header[DYNAMIC_ARRAY_LENGTH_INDEX]);
+}
+
+u64 dynamic_array_memory_allocated_count(void *array)
+{
+	u64 *header = (u64 *) ((char *)array - DYNAMIC_ARRAY_HEADER_SIZE);
+	return(header[DYNAMIC_ARRAY_WIDTH_INDEX] * header[DYNAMIC_ARRAY_SIZE_INDEX]);
+}
+
+/* TODO: dynamic_array_remove */
 
 /* NOTE(josh): binary trees might be nice as well? */

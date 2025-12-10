@@ -71,14 +71,7 @@ int main(int argc, char **argv)
 {
 	start_profile();
 
-	if(argc != 3) { log_error("USAGE -> ./prog [input_file] [number of connections to make]"); return(-1); }
-	u64 number_of_connections_to_make = 0;
-	u32 char_index = 0;
-	while(argv[2][char_index] != '\0')
-	{
-		number_of_connections_to_make = number_of_connections_to_make * 10 + (argv[2][char_index] - 48);
-		char_index++;
-	}
+	if(argc != 2) { log_error("USAGE -> ./prog [input_file]"); return(-1); }
 
 	u64 input_size = get_file_size(argv[1]);
 	PROFILER_START_TIMING_BANDWIDTH(file_read, input_size);
@@ -142,7 +135,10 @@ int main(int argc, char **argv)
 	u32 connections_made = 0;
 	global_circuit_sizes = malloc(sizeof(u32) * junction_box_count);
 	zero_memory(global_circuit_sizes, sizeof(u32) * junction_box_count);
-	while(connections_made < number_of_connections_to_make)
+	u32 circuit_count = junction_box_count;
+	u32 final_box_one;
+	u32 final_box_two;
+	while(connections_made < dynamic_array_length(global_junction_box_distance_array))
 	{
 		junction_box_distance dist = global_junction_box_distance_array[connections_made];
 		i32 box_one_circuit = box_get_circuit(dist.box_one_id);
@@ -154,64 +150,21 @@ int main(int argc, char **argv)
 		else
 		{
 			global_junction_box_array[box_one_circuit].parent_box = box_two_circuit;
+			circuit_count--;
 		}
 		connections_made++;
+		if(circuit_count == 1)
+		{
+			final_box_one = dist.box_one_id;
+			final_box_two = dist.box_two_id;
+			break;
+		}
 	}
 	PROFILER_FINISH_TIMING_BLOCK(circuit_construction);
 
-	PROFILER_START_TIMING_BLOCK(finding_largest_circuits);
-	i32 first_largest = -1;
-	i32 second_largest = -1;
-	i32 third_largest = -1;
-
-	u32 box_index = 0;
-	for( ; box_index < junction_box_count; box_index++)
-	{
-		i32 circuit = box_get_circuit(box_index);
-		global_circuit_sizes[circuit] += 1;
-	}
-
-	u32 circuit_index = 0;
-	for( ; circuit_index < junction_box_count; circuit_index++)
-	{
-		if(first_largest == -1)
-		{
-			first_largest = circuit_index;
-		}
-		else if(global_circuit_sizes[circuit_index] > global_circuit_sizes[first_largest])
-		{
-			third_largest = second_largest;
-			second_largest = first_largest;
-			first_largest = circuit_index;
-		}
-		else if(second_largest == -1)
-		{
-			second_largest = circuit_index;
-		}
-		else if(global_circuit_sizes[circuit_index] > global_circuit_sizes[second_largest])
-		{
-			third_largest = second_largest;
-			second_largest = circuit_index;
-		}
-		else if(third_largest == -1)
-		{
-			third_largest = circuit_index;
-		}
-		else if(global_circuit_sizes[circuit_index] > global_circuit_sizes[third_largest])
-		{
-			third_largest = circuit_index;
-		}
-		else
-		{
-			/* do nothing */
-		}
-	}
-	
-	PROFILER_FINISH_TIMING_BLOCK(finding_largest_circuits);
-
 	finish_and_print_profile(log_trace);
 
-	u64 result = global_circuit_sizes[first_largest] * global_circuit_sizes[second_largest] * global_circuit_sizes[third_largest];
+	u64 result = global_junction_box_array[final_box_one].pos.x * global_junction_box_array[final_box_two].pos.x;
 	log_info("result: %llu", result);
 
 	dynamic_array_destroy(global_junction_box_array);
