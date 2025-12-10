@@ -66,6 +66,12 @@ int main(int argc, char **argv)
 	if(input_size == 0) { log_error("input file '%s' has size: 0. terminating.", argv[1]); return(-1); }
 	if(!input) { log_error("could not read input from '%s'. terminating.", argv[1]); return(-1); }
 
+	log_trace("input:\n%s", input);
+	log_trace("input size: %llu", input_size);
+
+	/* TODO: get all the points, and keep track of min x and min y, as well as max x and max y, bc it will be points
+	 * with those that give the biggest rectangle, or like I guess try and find the 4 farthest corners? ? */
+	/* if you have max/min x/y, then you just find the points closest to that, yeah ? */
 	PROFILER_START_TIMING_BANDWIDTH(parse, input_size);
 	point *point_array = (point *)dynamic_array_create(sizeof(point), 2);
 	u64 input_index = 0;
@@ -122,6 +128,8 @@ int main(int argc, char **argv)
 	}
 	PROFILER_FINISH_TIMING_BLOCK(parse);
 
+	log_debug("\nmax x: %u\nmax y: %u\nmin x: %u\nmin y: %u", parse.max_x, parse.max_y, parse.min_x, parse.min_y);
+
 	PROFILER_START_TIMING_BANDWIDTH(finding_largest_area, sizeof(point) * dynamic_array_length(point_array));
 	largest_area_calculation_data calc_data;
 	zero_memory(&calc_data, sizeof(calc_data));
@@ -162,12 +170,32 @@ int main(int argc, char **argv)
 		}
 	}
 
+	log_debug("farthest top left point (index %u): %u, %u", 
+		   calc_data.point_index_top_left_closest, 
+		   point_array[calc_data.point_index_top_left_closest].x, 
+		   point_array[calc_data.point_index_top_left_closest].y); 
+	log_debug("farthest top right point (index %u): %u, %u", 
+		   calc_data.point_index_top_right_closest, 
+		   point_array[calc_data.point_index_top_right_closest].x, 
+		   point_array[calc_data.point_index_top_right_closest].y); 
+	log_debug("farthest bot left point (index %u): %u, %u", 
+		   calc_data.point_index_bot_left_closest, 
+		   point_array[calc_data.point_index_bot_left_closest].x, 
+		   point_array[calc_data.point_index_bot_left_closest].y); 
+	log_debug("farthest bot right point (index %u): %u, %u", 
+		   calc_data.point_index_bot_right_closest, 
+		   point_array[calc_data.point_index_bot_right_closest].x, 
+		   point_array[calc_data.point_index_bot_right_closest].y); 
+
 	u64 top_left_to_bot_right_area = 
 		(point_array[calc_data.point_index_bot_right_closest].x - point_array[calc_data.point_index_top_left_closest].x + 1) *
 		(point_array[calc_data.point_index_bot_right_closest].y - point_array[calc_data.point_index_top_left_closest].y + 1); 
 	u64 bot_left_to_top_right_area = 
 		(point_array[calc_data.point_index_top_right_closest].x - point_array[calc_data.point_index_bot_left_closest].x + 1) *
 		(point_array[calc_data.point_index_bot_left_closest].y - point_array[calc_data.point_index_top_right_closest].y + 1); 
+
+	log_debug("top left -> bot right area: %llu", top_left_to_bot_right_area);
+	log_debug("bot left -> top right area: %llu", bot_left_to_top_right_area);
 
 	u64 largest_area = 0;
 	if(top_left_to_bot_right_area > bot_left_to_top_right_area)
